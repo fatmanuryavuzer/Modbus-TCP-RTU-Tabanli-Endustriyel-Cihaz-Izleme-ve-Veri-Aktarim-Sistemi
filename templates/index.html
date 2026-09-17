@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Modbus Monitor</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+<body>
+    <main class="container">
+        <header class="page-header">
+            <div>
+                
+                <h1>Modbus Monitor</h1>
+                <p class="subtitle">Cihazlarınızın anlık ölçüm durumu</p>
+            </div>
+
+            <button
+                id="open-device-modal"
+                class="device-management-button"
+                type="button"
+            >
+                + Cihaz Yönetimi
+            </button>
+        </header>
+
+        <section class="summary-grid">
+            <article class="summary-card">
+                <span class="summary-label">Çevrimiçi cihaz</span>
+                <strong id="active-devices" class="summary-value">-</strong>
+                
+            </article>
+
+            <article class="summary-card">
+                <span class="summary-label">Toplam ölçüm</span>
+                <strong id="total-readings" class="summary-value">-</strong>
+                
+            </article>
+
+            <article class="summary-card summary-card-success">
+                <span class="summary-label">Başarılı okuma</span>
+                <strong id="successful-readings" class="summary-value">-</strong>
+                
+            </article>
+
+            <article class="summary-card summary-card-danger">
+                <span class="summary-label">Hatalı okuma</span>
+                <strong id="error-readings" class="summary-value">-</strong>
+                
+            </article>
+        </section>
+
+        <div class="dashboard-layout">
+            <aside class="filters-panel">
+                <div class="filters-heading">
+                    <h2>Filtreler</h2>
+                </div>
+
+                <div class="filter-group">
+                    <label for="device-filter">Cihaz</label>
+                    <select id="device-filter">
+                        <option value="">Tüm cihazlar</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="measurement-filter">Ölçüm</label>
+                    <select id="measurement-filter">
+                        <option value="">Tüm ölçümler</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="start-date">Başlangıç tarihi</label>
+                    <input type="date" id="start-date">
+                </div>
+
+                <div class="filter-group">
+                    <label for="end-date">Bitiş tarihi</label>
+                    <input type="date" id="end-date">
+                </div>
+
+                <div class="filter-actions">
+                    <button
+                        id="clear-filters"
+                        class="secondary-button"
+                        type="button"
+                    >
+                        Filtreleri temizle
+                    </button>
+
+                    <a
+                        id="download-filtered-csv"
+                        class="download-button"
+                        href="{{ url_for('download_csv') }}"
+                    >
+                        Filtreli CSV İndir
+                    </a>
+                </div>
+            </aside>
+
+            <section class="readings-panel">
+                <div class="panel-heading">
+                    <div>
+                        <p id="table-panel-eyebrow" class="eyebrow">
+                            CANLI VERİ
+                        </p>
+                        <h2 id="table-panel-title">
+                            Ölçüm tablosu
+                        </h2>
+                    </div>
+
+                    <div class="panel-status">
+                        <p id="connection-status" class="connection-status">
+                            Bağlantı durumu: Kontrol ediliyor...
+                        </p>
+                        <p id="last-update" class="last-update">
+                            Son güncelleme: Bekleniyor...
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    class="table-tabs"
+                    role="tablist"
+                    aria-label="Ölçüm tabloları"
+                >
+                    <button
+                        id="live-table-tab"
+                        class="table-tab is-active"
+                        type="button"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="live-table-panel"
+                    >
+                        Canlı ölçümler
+                    </button>
+
+                    <button
+                        id="history-table-tab"
+                        class="table-tab"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="history-table-panel"
+                    >
+                        Geçmiş kayıtlar
+                    </button>
+                </div>
+
+                <div
+                    id="live-table-panel"
+                    class="table-tab-panel"
+                    role="tabpanel"
+                    aria-labelledby="live-table-tab"
+                >
+                    <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cihaz</th>
+                                <th>Ölçüm</th>
+                                <th>Register Adresi</th>
+                                <th>Değer</th>
+                                <th>Protokol</th>
+                                <th>Son Güncelleme</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="readings-table-body">
+                            {% for reading in readings %}
+                            <tr>
+                                <td>
+                                    <div class="cell-primary">
+                                        {{ reading["device_name"] }}
+                                    </div>
+                                    <div class="cell-secondary">
+                                        {{ reading["device_key"] }}
+                                    </div>
+                                    <div class="device-health-label device-health-unknown">
+                                        <span class="device-health-dot"></span>
+                                        <span>BİLİNMİYOR</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="cell-primary">
+                                        {{ reading["measurement_name"] }}
+                                    </div>
+                                    <div class="cell-secondary">
+                                        {{ reading["measurement_key"] }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="cell-primary">
+                                        {{ reading["address"] }}
+                                    </div>
+                                    <div class="cell-secondary">
+                                        Unit ID: {{ reading["unit_id"] }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if reading["status"] == "OK" %}
+                                    {{ "%.1f"|format(reading["value"]) }}
+                                    {{ reading["unit"] }}
+                                    {% else %}
+                                    Okunamadı
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="protocol-badge {% if (reading.get('protocol') or 'tcp') == 'rtu' %}protocol-rtu{% else %}protocol-tcp{% endif %}">
+                                        {{ (reading.get("protocol") or "tcp")|upper }}
+                                    </span>
+                                </td>
+                                <td class="reading-timestamp">
+                                    {{ reading["timestamp"]|replace("T", " ") }}
+                                </td>
+                                <td>
+                                    {% if reading['status'] == 'OK' %}
+                                    <span class="status-badge status-ok">
+                                        <span class="status-icon">✓</span>
+                                        OK
+                                    </span>
+                                    {% else %}
+                                    <button
+                                        type="button"
+                                        class="status-badge status-error status-details-trigger"
+                                        data-status="{{ reading.get('status') or 'HATA' }}"
+                                        data-device-name="{{ reading.get('device_name') or '-' }}"
+                                        data-measurement-name="{{ reading.get('measurement_name') or '-' }}"
+                                        data-protocol="{{ reading.get('protocol') or 'tcp' }}"
+                                        data-unit-id="{{ reading.get('unit_id') or '-' }}"
+                                        data-address="{{ reading.get('address') or '-' }}"
+                                        data-timestamp="{{ reading.get('timestamp') or '-' }}"
+                                        data-error="{{ reading.get('error') or 'Hata nedeni belirtilmedi.' }}"
+                                        aria-label="Hata ayrıntılarını göster"
+                                    >
+                                        <span class="status-icon">✕</span>
+                                        {{ reading.get('status') or 'HATA' }}
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+
+                <div
+                    id="history-table-panel"
+                    class="table-tab-panel"
+                    role="tabpanel"
+                    aria-labelledby="history-table-tab"
+                    hidden
+                >
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cihaz</th>
+                                    <th>Ölçüm</th>
+                                    <th>Register Adresi</th>
+                                    <th>Değer</th>
+                                    <th>Protokol</th>
+                                    <th>Tarih</th>
+                                    <th>Durum</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="history-table-body">
+                                <tr>
+                                    <td colspan="7">
+                                        Geçmiş kayıtlar yükleniyor...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="transfer-panel">
+                <div class="transfer-heading">
+                    <p class="eyebrow">DIŞA AKTAR</p>
+                    <h2>Aktarım merkezi</h2>
+                    
+                </div>
+
+            <div
+                class="transfer-methods"
+                role="group"
+                aria-label="Aktarım yöntemi"
+            >
+                <button
+                    id="ftp-method"
+                    class="transfer-method is-selected"
+                    data-method="ftp"
+                    type="button"
+                >
+                    FTP
+                </button>
+
+                <button
+                    id="sftp-method"
+                    class="transfer-method"
+                    data-method="sftp"
+                    type="button"
+                >
+                    SFTP
+                </button>
+
+                <button
+                    id="json-api-method"
+                    class="transfer-method"
+                    data-method="json-api"
+                    type="button"
+                >
+                    JSON API
+                </button>
+            </div>
+
+                <div class="transfer-group">
+                    <label for="transfer-format">Dosya formatı</label>
+                    <select id="transfer-format">
+                        <option value="csv">CSV</option>
+                        <option value="json">JSON</option>
+                    </select>
+                </div>
+
+                <div class="transfer-group">
+                    <label for="transfer-window">Kayıt aralığı</label>
+                    <select id="transfer-window">
+                        <option value="manual">
+                            Mevcut filtreler
+                        </option>
+                        <option value="custom">
+                            Son belirlenen saat aralığı
+                        </option>
+                    </select>
+                </div>
+
+                <div
+                    id="transfer-hours-group"
+                    class="transfer-group"
+                    hidden
+                >
+                    <label for="transfer-hours">
+                        Son kaç saat?
+                    </label>
+                    <input
+                        id="transfer-hours"
+                        type="number"
+                        min="1"
+                        max="24"
+                        step="1"
+                        value="3"
+                        inputmode="numeric"
+                    >
+                    <small>
+                        1 ile 24 arasında tam sayı girin.
+                    </small>
+                </div>
+
+                <div class="transfer-group">
+                    <label for="transfer-destination">Hedef adres</label>
+                    <input
+                        id="transfer-destination"
+                        type="text"
+                        placeholder="ftp://sunucu/dizin"
+                    >
+                </div>
+
+                     <div class="transfer-group">
+                        <label for="transfer-username">
+                            Kullanıcı adı
+                        </label>
+
+                        <input
+                            id="transfer-username"
+                            type="text"
+                            placeholder="FTP kullanıcı adı"
+                            autocomplete="username"
+                >
+                 </div>
+
+                <div class="transfer-group">
+                <label for="transfer-password">
+                    Parola
+                </label>
+
+                <input
+                    id="transfer-password"
+                    type="password"
+                    placeholder="FTP parolası"
+                    autocomplete="current-password"
+    >
+                </div>
+
+                <button
+                    id="transfer-submit"
+                    class="transfer-submit"
+                    type="button"
+>
+                         Seçili listeyi gönder
+                </button>
+
+                <p
+                    id="transfer-status"
+                    class="transfer-status"
+>
+                    Henüz aktarım yapılmadı.
+                </p>
+
+                <details
+                    id="transfer-history-panel"
+                    class="transfer-history"
+                >
+                    <summary>
+                        <span>Aktarım geçmişi</span>
+                        <span
+                            id="transfer-history-count"
+                            class="transfer-history-count"
+                        >
+                            -
+                        </span>
+                    </summary>
+
+                    <div class="transfer-history-toolbar">
+                        <span
+                            id="transfer-history-status"
+                            class="transfer-history-status"
+                        >
+                            Yükleniyor...
+                        </span>
+
+                        <button
+                            id="refresh-transfer-history"
+                            class="secondary-button"
+                            type="button"
+                        >
+                            Yenile
+                        </button>
+                    </div>
+
+                    <div
+                        id="transfer-history-list"
+                        class="transfer-history-list"
+                    ></div>
+                </details>
+            </aside>
+        </div>
+
+        <section
+            id="device-modal"
+            class="device-modal"
+            aria-hidden="true"
+        >
+            <div
+                class="device-modal-content"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="device-modal-title"
+            >
+                <div class="device-modal-header">
+                    <div>
+                        <p class="eyebrow">CİHAZ YÖNETİMİ</p>
+                        <h2 id="device-modal-title">
+                            Kayıtlı cihazlar
+                        </h2>
+                    </div>
+
+                    <button
+                        id="close-device-modal"
+                        class="device-modal-close"
+                        type="button"
+                        aria-label="Paneli kapat"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <p
+                    id="device-modal-description"
+                    class="device-modal-description"
+                    hidden
+                >
+                </p>
+
+                <nav
+                    class="device-view-nav"
+                    aria-label="Cihaz yönetimi işlemleri"
+                >
+                    <button
+                        class="device-view-button is-active"
+                        data-device-view="list"
+                        type="button"
+                    >
+                        Kayıtlı cihazlar
+                    </button>
+                    <button
+                        class="device-view-button is-primary"
+                        data-device-view="single"
+                        type="button"
+                    >
+                        + Tek cihaz ekle
+                    </button>
+                    <button
+                        class="device-view-button"
+                        data-device-view="bulk"
+                        type="button"
+                    >
+                        Şablondan çoğalt
+                    </button>
+                    <button
+                        class="device-view-button"
+                        data-device-view="csv"
+                        type="button"
+                    >
+                        CSV ile içe aktar
+                    </button>
+                </nav>
+
+                <section
+                    id="device-view-list"
+                    class="managed-devices-section device-view-section"
+                >
+                    <div class="managed-device-toolbar">
+                        <div class="managed-device-filter">
+                            <label for="managed-device-search">
+                                Cihaz ara
+                            </label>
+                            <input
+                                id="managed-device-search"
+                                type="search"
+                                placeholder="Ad veya anahtar"
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <div class="managed-device-filter">
+                            <label for="managed-device-status-filter">
+                                Durum
+                            </label>
+                            <select id="managed-device-status-filter">
+                                <option value="all">Tümü</option>
+                                <option value="enabled">Etkin</option>
+                                <option value="disabled">Devre dışı</option>
+                            </select>
+                        </div>
+
+                        <button
+                            id="refresh-device-list"
+                            class="measurement-add-button"
+                            type="button"
+                        >
+                            Listeyi yenile
+                        </button>
+
+                        <label class="managed-device-select-all">
+                            <input
+                                id="select-all-managed-devices"
+                                type="checkbox"
+                            >
+                            <span>Tümünü seç</span>
+                        </label>
+                    </div>
+
+                    <div
+                        id="managed-device-bulk-actions"
+                        class="managed-device-bulk-actions"
+                        hidden
+                    >
+                        <span
+                            id="managed-device-selection-count"
+                            class="managed-device-selection-count"
+                        >
+                            0 cihaz seçildi
+                        </span>
+
+                        <button
+                            class="managed-device-bulk-button"
+                            data-managed-bulk-action="enable"
+                            type="button"
+                        >
+                            Etkinleştir
+                        </button>
+
+                        <button
+                            class="managed-device-bulk-button"
+                            data-managed-bulk-action="disable"
+                            type="button"
+                        >
+                            Devre dışı bırak
+                        </button>
+
+                        <button
+                            class="managed-device-bulk-button is-danger"
+                            data-managed-bulk-action="delete"
+                            type="button"
+                        >
+                            Seçilenleri sil
+                        </button>
+
+                        <span
+                            id="managed-device-bulk-feedback"
+                            class="managed-device-bulk-feedback"
+                            role="status"
+                            aria-live="polite"
+                        ></span>
+                    </div>
+
+                    <div
+                        id="managed-device-list"
+                        class="managed-device-list"
+                    >
+                        <p class="device-list-message">
+                        Cihazlar yükleniyor...
+                        </p>
+                    </div>
+                </section>
+
+                <section
+                    id="device-view-advanced"
+                    class="bulk-device-section device-view-section"
+                    hidden
+                >
+                    <div id="device-bulk-content" hidden>
+                        <div class="device-section-heading">
+                            <div>
+                                <p class="device-section-title">
+                                    Şablondan çoğalt
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="device-csv-content" hidden>
+                    <div class="device-section-heading">
+                        <div>
+                            <p class="device-section-title">
+                                CSV ile içe aktar
+                            </p>
+
+                            <div class="csv-template-actions">
+                                <a
+                                    class="csv-template-link"
+                                    href="/api/devices/import-template/devices"
+                                >
+                                    Cihaz CSV şablonu
+                                </a>
+                                <a
+                                    class="csv-template-link"
+                                    href="/api/devices/import-template/measurements"
+                                >
+                                    Ölçüm CSV şablonu
+                                </a>
+                            </div>
+
+                            <form
+                                id="csv-import-form"
+                                class="csv-import-form"
+                            >
+                                <p class="csv-import-title">
+                                    CSV dosyalarını kontrol et
+                                </p>
+
+                                <label class="csv-file-field">
+                                    <span>Cihaz CSV dosyası</span>
+                                    <input
+                                        id="csv-devices-file"
+                                        type="file"
+                                        accept=".csv,text/csv"
+                                    >
+                                </label>
+
+                                <label class="csv-file-field">
+                                    <span>Ölçüm CSV dosyası</span>
+                                    <input
+                                        id="csv-measurements-file"
+                                        type="file"
+                                        accept=".csv,text/csv"
+                                    >
+                                </label>
+
+                                <label class="csv-auto-unit-option">
+                                    <input
+                                        id="csv-auto-unit-ids"
+                                        type="checkbox"
+                                        checked
+                                    >
+                                    Boş Unit ID alanlarını otomatik ata
+                                </label>
+
+                                <button
+                                    id="preview-csv-import"
+                                    class="measurement-add-button"
+                                    type="submit"
+                                >
+                                    CSV dosyalarını kontrol et
+                                </button>
+
+                                <p
+                                    id="csv-import-feedback"
+                                    class="device-form-feedback"
+                                    role="status"
+                                    aria-live="polite"
+                                ></p>
+
+                                <div
+                                    id="csv-import-preview"
+                                    class="csv-import-preview"
+                                    hidden
+                                ></div>
+
+                                <button
+                                    id="save-csv-import"
+                                    class="device-save-button"
+                                    type="button"
+                                    hidden
+                                >
+                                    Önizlemeyi SQLite’a kaydet
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div id="device-bulk-form-content" hidden>
+                    <form
+                        id="bulk-device-form"
+                        class="bulk-device-form"
+                    >
+                        <div class="device-form-group">
+                            <label for="bulk-template-device">
+                                Şablon cihaz
+                            </label>
+                            <select id="bulk-template-device">
+                                <option value="">
+                                    Cihaz seçin
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="device-form-grid">
+                            <div class="device-form-group">
+                                <label for="bulk-key-prefix">
+                                    Cihaz anahtarı ön eki
+                                </label>
+                                <input
+                                    id="bulk-key-prefix"
+                                    type="text"
+                                >
+                            </div>
+
+                            <div class="device-form-group">
+                                <label for="bulk-name-prefix">
+                                    Cihaz adı ön eki
+                                </label>
+                                <input
+                                    id="bulk-name-prefix"
+                                    type="text"
+                                >
+                            </div>
+
+                            <div class="device-form-group">
+                                <label for="bulk-start-number">
+                                    Başlangıç numarası
+                                </label>
+                                <input
+                                    id="bulk-start-number"
+                                    type="number"
+                                    min="1"
+                                    value="1"
+                                >
+                            </div>
+
+                            <div class="device-form-group">
+                                <label for="bulk-device-count">
+                                    Cihaz sayısı
+                                </label>
+                                <input
+                                    id="bulk-device-count"
+                                    type="number"
+                                    min="1"
+                                    max="1000"
+                                    value="2"
+                                >
+                            </div>
+
+                            <div class="device-form-group bulk-unit-id-mode">
+                                <span class="bulk-field-label">
+                                    Unit ID ataması
+                                </span>
+
+                                <label class="bulk-radio-option">
+                                    <input
+                                        type="radio"
+                                        name="bulk-unit-id-mode"
+                                        value="auto"
+                                        checked
+                                    >
+                                    Otomatik ata
+                                </label>
+
+                                <label class="bulk-radio-option">
+                                    <input
+                                        type="radio"
+                                        name="bulk-unit-id-mode"
+                                        value="manual"
+                                    >
+                                    Manuel eklenecek
+                                </label>
+                            </div>
+                        </div>
+
+                        <p class="bulk-device-note">
+                            Otomatik modda sistem boş Unit ID’leri bulur. Gerçek cihazlarda adresi cihaz üzerinden doğrulayıp manuel modu kullanın.
+                        </p>
+
+                        <div
+                            id="bulk-manual-unit-id-group"
+                            class="device-form-group"
+                            hidden
+                        >
+                            <label for="bulk-start-unit-id">
+                                Başlangıç Unit ID
+                            </label>
+                            <input
+                                id="bulk-start-unit-id"
+                                type="number"
+                                min="1"
+                                max="247"
+                                placeholder="10"
+                            >
+                        </div>
+
+                        <button
+                            id="bulk-create-devices"
+                            class="device-save-button"
+                            type="submit"
+                        >
+                            Cihazları oluştur
+                        </button>
+
+                        <p
+                            id="bulk-device-feedback"
+                            class="device-form-feedback"
+                            role="status"
+                        aria-live="polite"
+                    ></p>
+                    </form>
+                    </div>
+                </section>
+
+                <section
+                    id="device-view-single"
+                    class="device-view-section"
+                    hidden
+                >
+                <form id="device-form" class="device-form">
+                    <div class="device-form-grid">
+                        <div class="device-form-group">
+                            <label for="new-device-key">
+                                Cihaz anahtarı
+                            </label>
+                            <input
+                                id="new-device-key"
+                                type="text"
+                                placeholder="cihaz_E"
+                            >
+                        </div>
+
+                        <div class="device-form-group">
+                            <label for="new-device-name">
+                                Cihaz adı
+                            </label>
+                            <input
+                                id="new-device-name"
+                                type="text"
+                                placeholder="Simülasyon Cihazı E"
+                            >
+                        </div>
+
+                        <div class="device-form-group">
+                            <label for="new-device-protocol">
+                                Protokol
+                            </label>
+                            <select id="new-device-protocol">
+                                <option value="tcp">TCP</option>
+                                <option value="rtu">RTU</option>
+                            </select>
+                        </div>
+
+                        <div class="device-form-group">
+                            <label for="new-device-unit-id">
+                                Unit ID
+                            </label>
+                            <input
+                                id="new-device-unit-id"
+                                type="number"
+                                min="1"
+                                max="247"
+                                placeholder="5"
+                            >
+                        </div>
+                    </div>
+
+                    <section class="device-connection-section">
+                        <p class="device-section-title">
+                            Bağlantı bilgileri
+                        </p>
+
+                        <div
+                            id="tcp-fields"
+                            class="device-connection-fields"
+                        >
+                            <div class="device-form-grid">
+                                <div class="device-form-group">
+                                    <label for="new-device-host">
+                                        Host adresi
+                                    </label>
+                                    <input
+                                        id="new-device-host"
+                                        type="text"
+                                        placeholder="127.0.0.1"
+                                        value="127.0.0.1"
+                                    >
+                                </div>
+
+                                <div class="device-form-group">
+                                    <label for="new-device-port">
+                                        Port
+                                    </label>
+                                    <input
+                                        id="new-device-port"
+                                        type="number"
+                                        min="1"
+                                        max="65535"
+                                        placeholder="1502"
+                                        value="1502"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            id="rtu-fields"
+                            class="device-connection-fields"
+                            hidden
+                        >
+                            <div class="device-form-group">
+                                <label for="new-device-transport">
+                                    RTU taşıma tipi
+                                </label>
+                                <select id="new-device-transport">
+                                    <option value="memory">
+                                        Kod içi simülasyon
+                                    </option>
+                                    <option value="serial">
+                                        Gerçek COM port
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div
+                                id="rtu-serial-fields"
+                                class="device-connection-fields"
+                                hidden
+                            >
+                                <div class="device-form-grid">
+                                    <div class="device-form-group">
+                                        <label for="new-device-serial-port">
+                                            COM port
+                                        </label>
+                                        <input
+                                            id="new-device-serial-port"
+                                            type="text"
+                                            placeholder="COM3"
+                                        >
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label for="new-device-baudrate">
+                                            Baudrate
+                                        </label>
+                                        <input
+                                            id="new-device-baudrate"
+                                            type="number"
+                                            min="1"
+                                            value="9600"
+                                        >
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label for="new-device-parity">
+                                            Parity
+                                        </label>
+                                        <select id="new-device-parity">
+                                            <option value="N">N - Yok</option>
+                                            <option value="E">E - Çift</option>
+                                            <option value="O">O - Tek</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label for="new-device-stopbits">
+                                            Stopbits
+                                        </label>
+                                        <select id="new-device-stopbits">
+                                            <option value="1">1</option>
+                                            <option value="1.5">1.5</option>
+                                            <option value="2">2</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label for="new-device-bytesize">
+                                            Bytesize
+                                        </label>
+                                        <input
+                                            id="new-device-bytesize"
+                                            type="number"
+                                            min="5"
+                                            max="8"
+                                            value="8"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="device-measurements-section">
+                        <div class="device-section-heading">
+                            <div>
+                            <p class="device-section-title">
+                                Ölçüm tanımları
+                            </p>
+                            <p class="device-section-note">
+                                İsterseniz ölçümleri daha sonra da ekleyebilirsiniz.
+                            </p>
+                            </div>
+
+                            <button
+                                id="add-measurement"
+                                class="measurement-add-button"
+                                type="button"
+                            >
+                                + Ölçüm ekle
+                            </button>
+                        </div>
+
+                        <div
+                            id="measurement-list"
+                            class="measurement-list"
+                        >
+                            <div
+                                class="measurement-card"
+                                data-measurement-row
+                            >
+                                <div class="measurement-card-header">
+                                    <strong data-measurement-title>
+                                        Ölçüm 1
+                                    </strong>
+
+                                    <button
+                                        class="measurement-remove-button"
+                                        data-remove-measurement
+                                        type="button"
+                                    >
+                                        Sil
+                                    </button>
+                                </div>
+
+                                <div class="measurement-grid">
+                                    <div class="device-form-group">
+                                        <label>
+                                            Ölçüm anahtarı
+                                            <input
+                                                data-field="key"
+                                                type="text"
+                                                placeholder="temperature"
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label>
+                                            Ölçüm adı
+                                            <input
+                                                data-field="name"
+                                                type="text"
+                                                placeholder="Sıcaklık"
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label>
+                                            Function Code
+                                            <input
+                                                data-field="function_code"
+                                                type="number"
+                                                value="3"
+                                                readonly
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label>
+                                            Register adresi
+                                            <input
+                                                data-field="address"
+                                                type="number"
+                                                min="0"
+                                                max="65535"
+                                                placeholder="0"
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label>
+                                            Register adedi
+                                            <input
+                                                data-field="count"
+                                                type="number"
+                                                min="1"
+                                                max="125"
+                                                value="1"
+                                                readonly
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label>
+                                            Veri tipi
+                                            <select data-field="data_type">
+                                                <option value="u16">
+                                                    U16 - İşaretsiz
+                                                </option>
+                                                <option value="s16">
+                                                    S16 - İşaretli
+                                                </option>
+                                                <option value="u32">
+                                                    U32 - 2 register
+                                                </option>
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label>
+                                            Scale
+                                            <input
+                                                data-field="scale"
+                                                type="number"
+                                                min="0.000001"
+                                                step="0.001"
+                                                value="0.1"
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <div class="device-form-group">
+                                        <label>
+                                            Birim
+                                            <input
+                                                data-field="unit"
+                                                type="text"
+                                                list="measurement-unit-options"
+                                                autocomplete="off"
+                                                placeholder="Birim seçin veya yazın"
+                                            >
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <datalist id="measurement-unit-options">
+                        <option value="°C">Santigrat</option>
+                        <option value="°F">Fahrenheit</option>
+                        <option value="V">Volt</option>
+                        <option value="A">Amper</option>
+                        <option value="W">Watt</option>
+                        <option value="kW">Kilowatt</option>
+                        <option value="kWh">Kilowatt-saat</option>
+                        <option value="%">Yüzde</option>
+                        <option value="Hz">Hertz</option>
+                        <option value="bar">Bar</option>
+                        <option value="Pa">Pascal</option>
+                        <option value="rpm">Devir/dakika</option>
+                    </datalist>
+
+                    <p
+                        id="device-form-feedback"
+                        class="device-form-feedback"
+                        role="status"
+                        aria-live="polite"
+                    ></p>
+
+                    <div class="device-modal-actions">
+                        <button
+                            id="cancel-device-modal"
+                            class="secondary-button"
+                            type="button"
+                        >
+                            Vazgeç
+                        </button>
+
+                        <button
+                            id="save-device"
+                            class="device-save-button"
+                            type="submit"
+                        >
+                            Kaydet
+                        </button>
+                    </div>
+                </form>
+                </section>
+            </div>
+        </section>
+        </main>
+
+    <script
+        src="{{ url_for('static', filename='app.js') }}"
+    ></script>
+</body>
+</html>

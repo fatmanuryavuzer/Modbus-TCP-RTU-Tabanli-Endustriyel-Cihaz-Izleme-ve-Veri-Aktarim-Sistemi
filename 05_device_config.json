@@ -1,0 +1,160 @@
+{
+  "simulation": {
+    "rtu_enabled": false,
+    "serial_port": "",
+    "baudrate": 9600,
+    "parity": "N",
+    "stopbits": 1,
+    "bytesize": 8,
+    "timeout": 1
+  },
+  "devices": [
+    {
+      "key": "cihaz_A",
+      "name": "Simülasyon Cihazı A",
+      "protocol": "tcp",
+      "retry_count": 2,
+      "retry_delay": 0.5,
+      "host": "127.0.0.1",
+      "port": 1502,
+      "unit_id": 1,
+      "measurements": [
+        {
+          "key": "temperature",
+          "name": "Sıcaklık",
+          "function_code": 3,
+          "address": 0,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "°C"
+        },
+        {
+          "key": "voltage",
+          "name": "Gerilim",
+          "function_code": 3,
+          "address": 1,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "V"
+        },
+                {
+          "key": "negative_temperature",
+          "name": "Negatif Sıcaklık",
+          "function_code": 3,
+          "address": 2,
+          "count": 1,
+          "data_type": "s16",
+          "scale": 0.1,
+          "unit": "°C"
+        },
+                {
+          "key": "energy",
+          "name": "Enerji",
+          "function_code": 3,
+          "address": 3,
+          "count": 2,
+          "data_type": "u32",
+          "scale": 0.001,
+          "unit": "kWh"
+        }
+      ]
+    },
+    {
+      "key": "cihaz_B",
+      "name": "Simülasyon Cihazı B",
+      "protocol": "tcp",
+      "retry_count": 2,
+      "retry_delay": 0.5,
+      "host": "127.0.0.1",
+      "port": 1502,
+      "unit_id": 2,
+      "measurements": [
+        {
+          "key": "temperature",
+          "name": "Sıcaklık",
+          "function_code": 3,
+          "address": 0,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "°C"
+        },
+        {
+          "key": "voltage",
+          "name": "Gerilim",
+          "function_code": 3,
+          "address": 1,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "V"
+        }
+      ]
+    },
+    {
+      "key": "cihaz_C",
+      "name": "Simülasyon Cihazı C",
+      "protocol": "tcp",
+      "retry_count": 2,
+      "retry_delay": 0.5,
+      "host": "127.0.0.1",
+      "port": 1502,
+      "unit_id": 3,
+      "measurements": [
+        {
+          "key": "temperature",
+          "name": "Sıcaklık",
+          "function_code": 3,
+          "address": 0,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "°C"
+        },
+        {
+          "key": "voltage",
+          "name": "Gerilim",
+          "function_code": 3,
+          "address": 1,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "V"
+        }
+      ]
+    },
+    {
+      "key": "rtu_cihaz_D",
+      "name": "Simülasyon RTU Cihazı D",
+      "protocol": "rtu",
+      "transport": "memory",
+      "retry_count": 2,
+      "retry_delay": 0.5,
+      "unit_id": 4,
+      "measurements": [
+        {
+          "key": "temperature",
+          "name": "Sıcaklık",
+          "function_code": 3,
+          "address": 0,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "°C"
+        },
+        {
+          "key": "voltage",
+          "name": "Gerilim",
+          "function_code": 3,
+          "address": 1,
+          "count": 1,
+          "data_type": "u16",
+          "scale": 0.1,
+          "unit": "V"
+        }
+      ]
+    }
+  ]
+}
